@@ -1,38 +1,34 @@
-from fastapi.templating import Jinja2Templates
 import pandas as pd
+from fastapi.templating import Jinja2Templates
 from models.emotion_model import SentimentAnalyzer
 
+# 템플릿 디렉토리 설정
 templates = Jinja2Templates(directory="templates")
-songs_data = pd.read_csv("data/songs.csv")
 
-# 감정 매핑
-MOOD_MAPPING = {
-    "Anger": "Angry",
-    "Fear": "Sentimental",
-    "Happy": "Happy",
-    "Tender": "Sentimental",
-    "Sad": "Sad"
-}
+# 노래 데이터 로드
+songs_data = pd.read_csv("data/songs_mood.csv")
 
-# 감정 피드백 메시지
+# 감정 → Mood 매핑 (필터링용)
 MOOD_COMMENTS = {
-    "Happy": "오늘 당신의 기분은 행복하군요! 신나는 노래로 기분을 더 업그레이드해보세요!",
-    "Sentimental": "오늘은 감성적인 하루를 보내고 계신가요? 마음을 따뜻하게 할 노래들을 준비했어요.",
-    "Angry": "화가 난 마음, 음악으로 풀어보는 건 어떨까요? 강렬한 비트가 기다리고 있어요!",
-    "Sad": "조금 우울한 하루였나요? 감정을 위로해줄 곡을 추천드려요. 편히 쉬면서 들어보세요."
+    "행복": "오늘 기분이 행복하군요! 신나는 노래로 더 즐겁게!",
+    "놀람": "조금 놀란 하루였군요. 마음을 안정시켜줄 음악이에요.",
+    "분노": "속상했던 하루였나요? 강렬한 비트로 날려버려요!",
+    "공포": "불안한 감정에는 따뜻한 감성 음악이 어울려요.",
+    "혐오": "기분이 좋지 않다면 차분한 음악으로 진정해보세요.",
+    "슬픔": "마음이 무거우셨군요. 위로가 되는 곡들을 준비했어요.",
+    "중립": "오늘은 담담한 하루, 잔잔한 곡들과 함께해요."
 }
 
+# 모델 초기화
 analyzer = SentimentAnalyzer()
 
-def analyze_text(user_text: str) -> str:
-    if not user_text.strip():
-        raise ValueError("입력된 텍스트가 비어 있습니다.")
-    return analyzer.analyze_sentiment(user_text)
+def analyze_text(text: str) -> str:
+    return analyzer.analyze_sentiment(text)
 
 def render_list_page(request, mood: str):
     try:
-        filtered_songs = songs_data[songs_data["Mood"].str.lower() == mood.lower()]
-        recommended = filtered_songs.head(12).to_dict(orient="records")
+        filtered = songs_data[songs_data["Mood"] == mood]
+        recommended = filtered.head(12).to_dict(orient="records")
         feedback = MOOD_COMMENTS.get(mood, "오늘의 추천입니다.")
         return templates.TemplateResponse("list.html", {
             "request": request,
@@ -51,10 +47,10 @@ def render_list_page(request, mood: str):
 
 def render_box_page(request, mood: str, title: str):
     try:
-        filtered_songs = songs_data[songs_data["Mood"].str.lower() == mood.lower()]
-        selected_songs = filtered_songs.sample(n=min(8, len(filtered_songs))).to_dict(orient="records")
-        playlist = selected_songs[:4]
-        top_songs = selected_songs[:5]
+        filtered = songs_data[songs_data["Mood"] == mood]
+        selected = filtered.sample(n=min(8, len(filtered))).to_dict(orient="records")
+        playlist = selected[:4]
+        top_songs = selected[:5]
         return templates.TemplateResponse("box.html", {
             "request": request,
             "playlist": playlist,

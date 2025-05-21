@@ -81,32 +81,24 @@ async def analyze_endpoint(user_text: str = Form(...)):
         return {"error": f"오류 발생: {str(e)}"}
 
 @app.post("/recommend", response_class=HTMLResponse)
-async def recommend_endpoint(request: Request, user_text: str = Form(...)):
+async def recommend_entry(request: Request, user_text: str = Form(...)):
     try:
-        sentiment = analyze_text(user_text)  # 동기 함수이므로 await 없이 호출
-        print(f"분석된 감정: {sentiment}")
-        mood = MOOD_MAPPING.get(sentiment)
-        if not mood:
-            return JSONResponse(
-                content={"message": f"'{sentiment}'에 해당하는 노래를 찾을 수 없습니다."},
-                status_code=400
-            )
-        # mood에 해당하는 노래 필터링 및 추천 리스트 생성
-        filtered_songs = songs_data[songs_data["Mood"].str.lower() == mood.lower()]
-        recommended = filtered_songs.head(12).to_dict(orient="records")
-        feedback = MOOD_COMMENTS.get(mood, "오늘의 추천입니다.")
-        
-        # recommend.html 템플릿을 렌더링해서 이동
-        return templates.TemplateResponse("recommend.html", {
+        sentiment = analyze_text(user_text)  
+        filtered_songs = songs_data[songs_data["Mood"] == sentiment]
+
+        # 랜덤 3곡 추천
+        sample_songs = filtered_songs.sample(n=min(3, len(filtered_songs))).to_dict(orient="records")
+        feedback = MOOD_COMMENTS.get(sentiment, "오늘의 추천입니다.")
+
+        return templates.TemplateResponse("list.html", {
             "request": request,
-            "songs": recommended,
-            "mood": mood,
+            "mood": sentiment,
+            "songs": sample_songs,
             "feedback": feedback
         })
     except Exception as e:
         print(f"오류 발생: {e}")
         return JSONResponse(content={"error": f"오류 발생: {str(e)}"}, status_code=500)
-
 
 @app.get("/box1", response_class=HTMLResponse)
 async def box1(request: Request):
