@@ -6,4 +6,4 @@ users.db
 
 .python-version
 
-KoBERT/
+models/*.pt
