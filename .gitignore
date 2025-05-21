@@ -8,4 +8,7 @@ users.db
 
 models/*.pt
 
-KoBERT/
+KoBERT/*.pt
+*.bin
+*.pkl
+*.npy
